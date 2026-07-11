@@ -4,7 +4,7 @@ USE retail_db;
 --MASTER DATA
 --------------------------
 
-CREATE TABLE IF NOT EXISTS master_data.customers
+CREATE TABLE master_data.customers
 (
     customer_id INT IDENTITY(1,1) NOT NULL,
     first_name  NVARCHAR(100) NOT NULL,
