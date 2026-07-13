@@ -10,6 +10,7 @@ __pycache__/
 # Environment
 # -----------------------------
 docker/.env
+scripts/.env
 
 # -----------------------------
 # VS Code
