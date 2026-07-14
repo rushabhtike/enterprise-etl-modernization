@@ -114,7 +114,7 @@ PAYMENT_METHODS = [
     "Credit Card",
     "Debit Card",
     "UPI",
-    "COD",
+    "Cash",
     "Net Banking",
 ]
 

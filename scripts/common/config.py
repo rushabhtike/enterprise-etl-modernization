@@ -19,9 +19,10 @@ class Config:
         NUM_SUPPLIERS = 20
         NUM_STORES = 5
         NUM_PRODUCTS = 500
-        NUM_CUSTOMERS = 1000
-        NUM_EMPLOYEES = 50
-        NUM_ORDERS = 10000
+        NUM_CUSTOMERS = 2000
+        NUM_EMPLOYEES = 100
+        NUM_ORDERS = 20000
+        NUM_INVENTORY_TRANSACTIONS = 50000
     else:
         NUM_SUPPLIERS = 100
         NUM_STORES = 25
@@ -29,3 +30,4 @@ class Config:
         NUM_CUSTOMERS = 100000
         NUM_EMPLOYEES = 500
         NUM_ORDERS = 1000000
+        NUM_INVENTORY_TRANSACTIONS = 5050000

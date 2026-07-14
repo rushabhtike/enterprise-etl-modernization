@@ -10,7 +10,7 @@ CREATE TABLE master_data.customers
     first_name  NVARCHAR(100) NOT NULL,
     last_name   NVARCHAR(100) NOT NULL,
     email       NVARCHAR(255) NOT NULL,
-    phone       NVARCHAR(25) NOT NULL,
+    phone       NVARCHAR(25) NULL,
     date_of_birth DATE,
     gender      CHAR(1),
     

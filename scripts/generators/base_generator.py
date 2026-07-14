@@ -1,56 +1,53 @@
 from abc import ABC, abstractmethod
+
 import pandas as pd
 
-from common.logger import get_logger
 from loaders.sql_server_loader import SQLServerLoader
 
 
 class BaseGenerator(ABC):
+    """Base class for all data generators."""
 
     def __init__(self):
-        self.logger = get_logger(self.__class__.__name__)
         self.loader = SQLServerLoader()
 
     @property
     @abstractmethod
     def schema(self) -> str:
+        """Target SQL Server schema."""
         pass
 
     @property
     @abstractmethod
     def table(self) -> str:
+        """Target SQL Server table."""
         pass
 
     @abstractmethod
     def generate(self) -> pd.DataFrame:
+        """Generate source data."""
         pass
 
-    def validate(self, df: pd.DataFrame):
+    def validate(self, dataframe: pd.DataFrame) -> None:
+        """Generic validation."""
 
-        if df.empty:
-            raise ValueError("Generated DataFrame is empty.")
+        if dataframe.empty:
+            raise ValueError(
+                f"{self.schema}.{self.table} generated an empty DataFrame."
+            )
 
-        self.logger.info(
-            "Validation successful. %s rows generated.",
-            len(df)
-        )
+        if dataframe.columns.duplicated().any():
+            raise ValueError(
+                f"{self.schema}.{self.table} contains duplicate column names."
+            )
 
-    def run(self):
+    def load(self, dataframe: pd.DataFrame) -> None:
+        """Validate and load the generated data."""
 
-        self.logger.info(
-            "Generating %s.%s",
-            self.schema,
-            self.table
-        )
-
-        df = self.generate()
-
-        self.validate(df)
+        self.validate(dataframe)
 
         self.loader.load(
-            dataframe=df,
+            dataframe=dataframe,
             schema=self.schema,
-            table=self.table
+            table=self.table,
         )
-
-        self.logger.info("Finished loading.")
