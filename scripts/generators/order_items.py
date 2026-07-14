@@ -97,4 +97,4 @@ class OrderItemsGenerator(BaseGenerator):
                     }
                 )
 
-        return pd.DataFrame(rows)
+        return pd.DataFrame(rows)   
