@@ -54,3 +54,8 @@ Thumbs.db
 
 # Local Glue output
 docker/glue/output/
+
+# -----------------------------
+# Jars
+# -----------------------------
+docker/glue/jars/*.jar

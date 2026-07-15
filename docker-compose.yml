@@ -32,11 +32,10 @@ services:
     volumes:
       - .:/home/hadoop/workspace
       - ./docker/glue/jars:/opt/spark/jars
+    env_file:
+    - .env
     environment:
-      PYTHONPATH: >-
-        /usr/share/aws/glue-pds:
-        /usr/share/aws/glue-pds/PyGlue.zip:
-        /home/hadoop/workspace/docker/glue
+      PYTHONPATH: "/usr/share/aws/glue-pds:/usr/share/aws/glue-pds/PyGlue.zip:/home/hadoop/workspace/docker/glue"
     stdin_open: true
     tty: true
     depends_on:
