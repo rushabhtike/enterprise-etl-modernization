@@ -30,6 +30,8 @@ sample_data/
 *.csv
 *.parquet
 
+docker/glue/output/
+
 # -----------------------------
 # Python
 # -----------------------------

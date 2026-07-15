@@ -1,0 +1,40 @@
+{
+    "tables":[
+        {
+            "source_table":"sales.orders",
+            "target_name":"orders"
+        },
+        {
+            "source_table":"sales.order_items",
+            "target_name":"order_items"
+        },
+        {
+            "source_table":"master_data.customers",
+            "target_name":"customers"
+        },
+        {
+            "source_table":"master_data.products",
+            "target_name":"products"
+        },
+        {
+            "source_table": "master_data.stores",
+            "target_name": "stores"
+        },
+        {
+            "source_table": "master_data.suppliers",
+            "target_name": "suppliers"
+        },
+        {
+            "source_table": "inventory.inventory",
+            "target_name": "inventory"
+        },
+        {
+            "source_table": "inventory.inventory_transactions",
+            "target_name": "inventory_transactions"
+        },
+        {
+            "source_table": "hr.employees",
+            "target_name": "employees"
+        }
+    ]
+}
