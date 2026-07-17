@@ -53,7 +53,7 @@ def main()->None:
     bronze_df=(
         base_df
         .withColumn("ingestion_timestamp", F.current_timestamp())
-        .withColumn("source_table",F.lit("sales.orders"))
+        .withColumn("source_table",F.lit(source_table))
         .withColumn("source_system",F.lit("SQLSERVER"))
     )
 
