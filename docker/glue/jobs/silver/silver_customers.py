@@ -21,9 +21,9 @@ EMAIL_PATTERN = (
 )
 
 
-def clean_customers(customers: DataFrame)->DataFrame:
-    cleaned_customers=(
-        customers
+def clean_customers(df: DataFrame)->DataFrame:
+    return (
+        df
         .withColumn("first_name",F.trim(F.initcap(F.col("first_name"))))
         .withColumn("last_name",F.trim(F.initcap(F.col("last_name"))))
         .withColumn("email",F.lower(F.trim(F.col("email"))))
@@ -40,11 +40,9 @@ def clean_customers(customers: DataFrame)->DataFrame:
         .withColumn("source_system",F.trim(F.initcap(F.col("source_system"))))
     )
 
-    return cleaned_customers
-
-def add_data_quality_errors(customers: DataFrame)->DataFrame:
-    df=(
-    customers.withColumn("dq_errors",
+def add_data_quality_errors(df: DataFrame)->DataFrame:
+    return (
+    df.withColumn("dq_errors",
                   F.array_compact(
                         F.array(
                             F.when(F.col("customer_id").isNull(), F.lit("CUSTOMER_ID_MISSING")),
@@ -67,8 +65,6 @@ def add_data_quality_errors(customers: DataFrame)->DataFrame:
                         )
                     )
     )
-
-    return df
 
 def main()->None:
     spark_context=SparkContext.getOrCreate()
@@ -126,14 +122,21 @@ def main()->None:
         REJECT_BASE_PATH
     )
 
+    written_file_count=spark.read.parquet(SILVER_OUTPUT_BASE_PATH).count()
+    rejected_file_count=spark.read.parquet(REJECT_BASE_PATH).count()
+
     print(
         "Silver customers written to:"
-        f"{SILVER_OUTPUT_BASE_PATH}"
+        f"{SILVER_OUTPUT_BASE_PATH}\n"
+        "Count: "
+        f"{written_file_count}"
     )
 
     print(
         "Rejected customers written to:"
-        f"{REJECT_BASE_PATH}"
+        f"{REJECT_BASE_PATH}\n"
+        "Count: "
+        f"{rejected_file_count}"
     )
 
     print("Data quality error summary:")
