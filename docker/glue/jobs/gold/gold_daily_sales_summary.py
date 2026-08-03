@@ -3,16 +3,16 @@ from pyspark.context import SparkContext
 from pyspark.sql import functions as F
 
 SILVER_INPUT_BASE_PATH=(
-    "/home/hadoop/workspace/docker/glue/output/silver/"
+    "local.silver.sales_order_items_enriched"
 )
 
-GOLD_OUTPUT_BASE_PATH=(
-    "/home/hadoop/workspace/docker/glue/output/gold/"
-)
+# GOLD_OUTPUT_BASE_PATH=(
+#     "/home/hadoop/workspace/docker/glue/output/gold/"
+# )
 
-GOLD_DAILY_SALES_SUMMARY_PATH=(
-    GOLD_OUTPUT_BASE_PATH+"daily_sales_summary/"
-)
+# GOLD_DAILY_SALES_SUMMARY_PATH=(
+#     GOLD_OUTPUT_BASE_PATH+"daily_sales_summary/"
+# )
 
 ICEBERG_DAILY_SALES_TABLE = (
     "local.gold.daily_sales_summary"
@@ -26,20 +26,7 @@ def main()->None:
     spark.sparkContext.setLogLevel("WARN")
     
     
-    print(
-        "Driver memory:",
-        spark.sparkContext.getConf().get(
-            "spark.driver.memory",
-            "not explicitly configured",
-        ),
-    )
-
-    print(
-        "Shuffle partitions:",
-        spark.conf.get("spark.sql.shuffle.partitions"),
-    )
-    
-    df=spark.read.parquet(SILVER_INPUT_BASE_PATH+"sales_order_items_enriched/")
+    df=spark.table(SILVER_INPUT_BASE_PATH)
     
     # Taking only delivered orders
     df_delivered = (

@@ -13,6 +13,14 @@ def main() -> None:
         "CREATE NAMESPACE IF NOT EXISTS local.gold"
     )
     
+    spark.sql(
+        "CREATE NAMESPACE IF NOT EXISTS local.silver"
+    )
+    
+    spark.sql(
+        "CREATE NAMESPACE IF NOT EXISTS local.bronze"
+    )
+    
     print("Available Spark catalogs:")
     spark.sql("SHOW CATALOGS").show(truncate=False)
 

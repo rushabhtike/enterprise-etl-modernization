@@ -10,6 +10,10 @@ SILVER_REJECT_BASE_PATH=(
     "/home/hadoop/workspace/docker/glue/output/reject/"
 )
 
+ICEBERG_ENRICHED_TABLE  = (
+    "local.silver.sales_order_items_enriched"
+)
+
 def check_key_uniqueness(df:DataFrame, col:str, table_name:str):
     stats=(
         df
@@ -198,22 +202,41 @@ def main()->None:
     order_items_products_rej.write.mode("overwrite").parquet(SILVER_REJECT_BASE_PATH+"/order_items_products_relationship/")
     
     # Write enriched file:
-    ENRICHED_SALES_PATH = (
-    SILVER_INPUT_BASE_PATH
-    + "sales_order_items_enriched/"
-)
-    enriched_df.write.mode("overwrite").parquet(ENRICHED_SALES_PATH)
+#     ENRICHED_SALES_PATH = (
+#     SILVER_INPUT_BASE_PATH
+#     + "sales_order_items_enriched/"
+# )
+#     enriched_df.write.mode("overwrite").parquet(ENRICHED_SALES_PATH)
+
+    (
+        enriched_df
+        .writeTo(ICEBERG_ENRICHED_TABLE)
+        .using("iceberg")
+        .partitionedBy(F.days("order_date"))
+        .createOrReplace()
+    )
     
     print(
-        f"Enriched sales written to: "
-        f"{ENRICHED_SALES_PATH}"
+        f"Enriched sales written to Iceberg Tables: "
+        f"{ICEBERG_ENRICHED_TABLE}"
     )
+    
+    iceberg_enriched_df = spark.table(
+        ICEBERG_ENRICHED_TABLE
+    )
+    
 
     print(
         f"Final enriched row count: "
         f"{enriched_count}"
     )
     
+    if iceberg_enriched_df.count()!=enriched_count:
+        raise ValueError(
+            "Iceberg row-count validation failed: "
+            f"expected={enriched_count}, "
+            f"actual={iceberg_enriched_df}"
+        )
     
     print("Sample enriched sales records:")
 
