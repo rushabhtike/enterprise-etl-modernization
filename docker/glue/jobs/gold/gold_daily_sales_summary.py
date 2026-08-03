@@ -14,12 +14,30 @@ GOLD_DAILY_SALES_SUMMARY_PATH=(
     GOLD_OUTPUT_BASE_PATH+"daily_sales_summary/"
 )
 
+ICEBERG_DAILY_SALES_TABLE = (
+    "local.gold.daily_sales_summary"
+)
+
 def main()->None:
     spark_context=SparkContext.getOrCreate()
     glue_context=GlueContext(spark_context)
     spark=glue_context.spark_session
 
     spark.sparkContext.setLogLevel("WARN")
+    
+    
+    print(
+        "Driver memory:",
+        spark.sparkContext.getConf().get(
+            "spark.driver.memory",
+            "not explicitly configured",
+        ),
+    )
+
+    print(
+        "Shuffle partitions:",
+        spark.conf.get("spark.sql.shuffle.partitions"),
+    )
     
     df=spark.read.parquet(SILVER_INPUT_BASE_PATH+"sales_order_items_enriched/")
     
@@ -28,7 +46,7 @@ def main()->None:
         df
         .filter(F.col("order_status")=="DELIVERED")
         .withColumn("sales_date",F.to_date(F.col("order_date")))
-        .cache()
+        
     )
     
     delivered_count = df_delivered.count()
@@ -54,7 +72,7 @@ def main()->None:
         )
         .withColumn("average_item_value",F.round(F.col("net_sales") / F.col("total_order_items"),2))
         .withColumn("_gold_processed_timestamp", F.current_timestamp())
-        .cache()
+        
     )
     
     # Validation
@@ -85,15 +103,36 @@ def main()->None:
     if abs(gold_stats["gold_net_sales"]-silver_stats["silver_net_sales"])>0.02:
         raise ValueError(f"Net sales mismatch. Gold: {gold_stats['gold_net_sales']}, Silver: {silver_stats['silver_net_sales']}")
     
-    # Writing Gold table:
-    
-    df_delivered_agg.write.mode("overwrite").parquet(GOLD_DAILY_SALES_SUMMARY_PATH)
-    
     sales_summary_count=df_delivered_agg.count()
     
+    # Writing Gold table:
+    
+    #df_delivered_agg.write.mode("overwrite").parquet(GOLD_DAILY_SALES_SUMMARY_PATH)
+    
+    spark.sql("CREATE NAMESPACE IF NOT EXISTS local.gold")
+    
+    (
+    df_delivered_agg
+    .writeTo(ICEBERG_DAILY_SALES_TABLE)
+    .using("iceberg")
+    .partitionedBy("sales_date")
+    .createOrReplace()
+    )
+
+    iceberg_daily_sales_df = spark.table(ICEBERG_DAILY_SALES_TABLE)
+    iceberg_count = iceberg_daily_sales_df.count()
+    
+    if iceberg_count!=sales_summary_count:
+        raise ValueError(
+            "Iceberg row-count validation failed: "
+            f"expected={sales_summary_count}, "
+            f"actual={iceberg_count}"
+        )
+    
+    
     print(
-        f"Gold Daily Sales Summary written to: "
-        f"{GOLD_DAILY_SALES_SUMMARY_PATH}"
+        f"Gold Daily Sales Summary written to Iceberg Tables: "
+        f"{ICEBERG_DAILY_SALES_TABLE}"
     )
 
     print(
@@ -123,8 +162,8 @@ def main()->None:
         .show(20, truncate=False)
     )
     
-    df_delivered.unpersist()
-    df_delivered_agg.unpersist()
+    #df_delivered.unpersist()
+    #df_delivered_agg.unpersist()
     
     print(
         "Gold Daily Sales Summary processing "
