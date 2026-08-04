@@ -1,6 +1,8 @@
 from awsglue.context import GlueContext
 from pyspark.context import SparkContext
 from pyspark.sql import functions as F
+import argparse
+from datetime import datetime
 
 SILVER_INPUT_BASE_PATH=(
     "local.silver.sales_order_items_enriched"
@@ -18,12 +20,48 @@ ICEBERG_DAILY_SALES_TABLE = (
     "local.gold.daily_sales_summary"
 )
 
+def parse_arguments()->argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Build the enriched Silver sales table."
+    )
+    
+    parser.add_argument(
+        "--batch-id",
+        required=True,
+        help="Unique identifier shared by all jobs in this batch."
+    )
+    
+    parser.add_argument(
+        "--batch-date",
+        required=True,
+        help="Batch processing date in YYYY-MM-DD format."
+    )
+    
+    args = parser.parse_args()
+    
+    try:
+        datetime.strptime(args.batch_date, "%Y-%m-%d")
+    except ValueError as error:
+        raise ValueError(
+            "--batch-date must use YYYY-MM-DD format."
+        ) from error
+    
+    return args
+
 def main()->None:
     spark_context=SparkContext.getOrCreate()
     glue_context=GlueContext(spark_context)
     spark=glue_context.spark_session
 
     spark.sparkContext.setLogLevel("WARN")
+    
+    args=parse_arguments()
+    
+    batch_id = args.batch_id
+    batch_date = args.batch_date
+    
+    print(f"Batch ID: {batch_id}")
+    print(f"Batch date: {batch_date}")
     
     
     df=spark.table(SILVER_INPUT_BASE_PATH)
@@ -59,6 +97,8 @@ def main()->None:
         )
         .withColumn("average_item_value",F.round(F.col("net_sales") / F.col("total_order_items"),2))
         .withColumn("_gold_processed_timestamp", F.current_timestamp())
+        .withColumn("batch_id",F.lit(batch_id))
+        .withColumn("batch_date",F.lit(batch_date).cast("date"))
         
     )
     

@@ -2,6 +2,8 @@ from awsglue.context import GlueContext
 from pyspark.context import SparkContext
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
+import argparse
+from datetime import datetime
 
 SILVER_INPUT_BASE_PATH=(
     "/home/hadoop/workspace/docker/glue/output/silver/"
@@ -13,6 +15,35 @@ SILVER_REJECT_BASE_PATH=(
 ICEBERG_ENRICHED_TABLE  = (
     "local.silver.sales_order_items_enriched"
 )
+
+def parse_arguments()->argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Build the enriched Silver sales table."
+    )
+    
+    parser.add_argument(
+        "--batch-id",
+        required=True,
+        help="Unique identifier shared by all jobs in this batch."
+    )
+    
+    parser.add_argument(
+        "--batch-date",
+        required=True,
+        help="Batch processing date in YYYY-MM-DD format."
+    )
+    
+    args = parser.parse_args()
+    
+    try:
+        datetime.strptime(args.batch_date, "%Y-%m-%d")
+    except ValueError as error:
+        raise ValueError(
+            "--batch-date must use YYYY-MM-DD format."
+        ) from error
+    
+    return args
+        
 
 def check_key_uniqueness(df:DataFrame, col:str, table_name:str):
     stats=(
@@ -41,6 +72,14 @@ def main()->None:
     spark=glue_context.spark_session
 
     spark.sparkContext.setLogLevel("WARN")
+    
+    args=parse_arguments()
+    
+    batch_id = args.batch_id
+    batch_date = args.batch_date
+    
+    print(f"Batch ID: {batch_id}")
+    print(f"Batch date: {batch_date}")
 
     customers_df=spark.read.parquet(SILVER_INPUT_BASE_PATH+"/customers/")
     products_df=spark.read.parquet(SILVER_INPUT_BASE_PATH+"/products/")
@@ -76,6 +115,8 @@ def main()->None:
         .join(customers_df,"customer_id",how="left_anti")
         .withColumn("_relationship_error", F.lit("CUSTOMER NOT FOUND"))
         .withColumn("_rejected_timestamp", F.current_timestamp())
+        .withColumn("batch_id",F.lit(batch_id))
+        .withColumn("batch_date",F.lit(batch_date).cast("date"))
     )  
         
     # Keep only orders linked to valid customers.
@@ -97,6 +138,8 @@ def main()->None:
         .join(orders_clean,"order_id",how="left_anti")
         .withColumn("_relationship_error",F.lit("VALID_ORDER_NOT_FOUND"))
         .withColumn("_rejected_timestamp",F.current_timestamp())
+        .withColumn("batch_id",F.lit(batch_id))
+        .withColumn("batch_date",F.lit(batch_date).cast("date"))
     )
     
     # Product validation only for items linked to valid orders
@@ -111,6 +154,8 @@ def main()->None:
         .join(products_df,"product_id",how="left_anti")
         .withColumn("_relationship_error",F.lit("PRODUCT_NOT_FOUND"))
         .withColumn("_rejected_timestamp",F.current_timestamp())
+        .withColumn("batch_id",F.lit(batch_id))
+        .withColumn("batch_date",F.lit(batch_date).cast("date"))
     )
     
     # Final order-item set with both relationships valid.
@@ -161,11 +206,13 @@ def main()->None:
                 F.col("orders.order_status").alias("order_status"),
             )
             .withColumn("gross_line_amount",F.round(F.col("quantity")* F.col("unit_price"),2,))
-            .withColumn("net_line_amount",F.round((F.col("quantity")* F.col("unit_price")) - F.coalesce(F.col("discount_amount"),F.lit(0),),2,),)
-            .withColumn("order_year",F.year(F.col("order_date")),)
-            .withColumn("order_month",F.month(F.col("order_date")),)
-            .withColumn("order_date_key",F.date_format(F.col("order_date"),"yyyyMMdd",).cast("int"),)
-            .withColumn("_silver_processed_timestamp",F.current_timestamp(),)
+            .withColumn("net_line_amount",F.round((F.col("quantity")* F.col("unit_price")) - F.coalesce(F.col("discount_amount"),F.lit(0),),2,))
+            .withColumn("order_year",F.year(F.col("order_date")))
+            .withColumn("order_month",F.month(F.col("order_date")))
+            .withColumn("order_date_key",F.date_format(F.col("order_date"),"yyyyMMdd",).cast("int"))
+            .withColumn("_silver_processed_timestamp",F.current_timestamp())
+            .withColumn("batch_id",F.lit(batch_id))
+            .withColumn("batch_date",F.lit(batch_date).cast("date"))
     )
     
     enriched_count = enriched_df.count()
