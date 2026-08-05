@@ -62,3 +62,8 @@ docker/glue/output/
 # Jars
 # -----------------------------
 docker/glue/jars/*.jar
+
+# -----------------------------
+# Airflow
+# -----------------------------
+docker/airflow/logs/

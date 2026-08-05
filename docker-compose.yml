@@ -62,6 +62,43 @@ services:
 
     depends_on:
       - sqlserver
+    
+  airflow:
+    build:
+      context: .
+      dockerfile: docker/airflow/Dockerfile
+
+    image: enterprise-airflow:3.2.1
+    container_name: airflow
+
+    command: standalone
+
+    user: "50000:0"
+    working_dir: /opt/airflow
+
+    environment:
+      AIRFLOW_HOME: /opt/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DEFAULT_TIMEZONE: "Asia/Kolkata"
+      TZ: "Asia/Kolkata"
+
+    ports:
+      - "8080:8080"
+
+    volumes:
+      - airflow-home:/opt/airflow
+      - ./docker/airflow/dags:/opt/airflow/dags
+      - ./docker/airflow/logs:/opt/airflow/logs
+      - ./docker/airflow/plugins:/opt/airflow/plugins
+
+    # Allows Airflow to execute commands in glue-dev.
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    depends_on:
+      - glue-dev
+    
+    restart: unless-stopped
+
 
 volumes:
   sqlserver-data:
@@ -71,3 +108,5 @@ volumes:
   postgres-data:
     external: true
     name: docker_postgres-data
+  
+  airflow-home:
